@@ -1,6 +1,7 @@
 { lib, stdenvNoCC, fetchurl }:
 
-{ src, name ? "modpack", side ? "server", ... }@args:
+{ src, name ? "modpack", side ? "server", allowMissingFile ? false
+, allowMissingFilePred ? _: allowMissingFile, ... }@args:
 
 let
   readToml = t: builtins.fromTOML (builtins.readFile t);
@@ -50,10 +51,14 @@ in stdenvNoCC.mkDerivation {
     mkdir -p $out
   '' + (concat (f: ''
     mkdir -p "$out/${getParent f}"
-    cp "${src}/${f}" "$out/${f}"
+    cp "${src}/${f}" "$out/${f}${
+      lib.optionalString (allowMissingFilePred f) " || true"
+    }"
   '') staticFiles) + (concat ({ path, file, ... }: ''
     mkdir -p "$out/${getParent path}"
-    ln -s "${file}" "$out/${path}"
+    ln -s "${file}" "$out/${path}${
+      lib.optionalString (allowMissingFilePred path) " || true"
+    }"
   '') metaFiles));
 } // (builtins.removeAttrs args [ "src" "name" "side" ])
 
