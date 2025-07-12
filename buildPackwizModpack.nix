@@ -1,4 +1,4 @@
-{ lib, stdenvNoCC, fetchurl }:
+{ lib, stdenvNoCC, fetchurl, writeScript }:
 
 { src, name ? "modpack", side ? "server", allowMissingFile ? false
 , allowMissingFilePred ? _: allowMissingFile, ... }@args:
@@ -46,19 +46,21 @@ in stdenvNoCC.mkDerivation {
   dontUnpack = true;
   dontConfigure = true;
 
-  installPhase = let concat = lib.strings.concatMapStringsSep "\n";
-  in (''
-    mkdir -p $out
-  '' + (concat (f: ''
-    mkdir -p "$out/${getParent f}"
-    cp "${src}/${f}" "$out/${f}"${
-      lib.optionalString (allowMissingFilePred f) " || true"
-    }
-  '') staticFiles) + (concat ({ path, file, ... }: ''
-    mkdir -p "$out/${getParent path}"
-    ln -s "${file}" "$out/${path}"${
-      lib.optionalString (allowMissingFilePred path) " || true"
-    }
-  '') metaFiles));
+  installPhase = let
+    concat = lib.strings.concatMapStringsSep "\n";
+    script = (''
+      mkdir -p $out
+    '' + (concat (f: ''
+      mkdir -p "$out/${getParent f}"
+      cp "${src}/${f}" "$out/${f}"${
+        lib.optionalString (allowMissingFilePred f) " || true"
+      }
+    '') staticFiles) + (concat ({ path, file, ... }: ''
+      mkdir -p "$out/${getParent path}"
+      ln -s "${file}" "$out/${path}"${
+        lib.optionalString (allowMissingFilePred path) " || true"
+      }
+    '') metaFiles));
+  in "${writeScript "install" script}";
 } // (builtins.removeAttrs args [ "src" "name" "side" ])
 
