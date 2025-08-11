@@ -39,11 +39,11 @@ let
         inherit (f) side;
       }) partition.right);
   staticFiles = map ({ file, ... }: file) partition.wrong;
-in stdenvNoCC.mkDerivation {
-  pname = name;
+in stdenvNoCC.mkDerivation ({
+  inherit src;
   inherit (pack) version;
+  pname = name;
 
-  dontUnpack = true;
   dontConfigure = true;
 
   installPhase = let
@@ -52,7 +52,7 @@ in stdenvNoCC.mkDerivation {
       mkdir -p $out
     '' + (concat (f: ''
       mkdir -p "$out/${getParent f}"
-      cp "${src}/${f}" "$out/${f}"${
+      cp "./${f}" "$out/${f}"${
         lib.optionalString (allowMissingFilePred f) " || true"
       }
     '') staticFiles) + (concat ({ path, file, ... }: ''
@@ -62,5 +62,10 @@ in stdenvNoCC.mkDerivation {
       }
     '') metaFiles));
   in "${writeScript "install" script}";
-} // (builtins.removeAttrs args [ "src" "name" "side" ])
-
+} // (builtins.removeAttrs args [
+  "src"
+  "name"
+  "side"
+  "allowMissingFile"
+  "allowMissingFilePred"
+]))
